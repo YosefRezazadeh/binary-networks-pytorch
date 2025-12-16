@@ -17,7 +17,7 @@ from bnn.ops import  (
 from bnn import BConfig, prepare_binary_model, Identity
 from  bnn.models.resnet import resnet20
 
-from .utils import AverageMeter, ProgressMeter, accuracy
+from utils import AverageMeter, ProgressMeter, accuracy
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.001, type=float, help='learning rate')

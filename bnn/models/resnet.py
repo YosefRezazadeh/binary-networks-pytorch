@@ -187,6 +187,8 @@ def _resnet(
     layers: List[int],
     **kwargs: Any
 ) -> ResNet:
+    if arch == 'resnet20':
+        kwargs['stem_type'] = 'basic_small'
     model = ResNet(block, layers, **kwargs)
     return model
 
