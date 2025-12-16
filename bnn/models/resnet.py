@@ -93,7 +93,8 @@ class ResNet(nn.Module):
         elif stem_type == 'dabnn':
             self.conv1 = DaBNNStem(self.inplanes, norm_layer=norm_layer)
         self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        if len(layers) == 4:
+            self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         if len(layers) == 4:
             self.layer1 = self._make_layer(block, 64, layers[0])
@@ -163,7 +164,8 @@ class ResNet(nn.Module):
         if self.stem_type == 'basic' or self.stem_type == 'basic_small':
             x = self.bn1(x)
             x = self.relu(x)
-            x = self.maxpool(x)
+            if hasattr(self, 'maxpool'):
+                x = self.maxpool(x)
 
         x = self.layer1(x)
         x = self.layer2(x)
