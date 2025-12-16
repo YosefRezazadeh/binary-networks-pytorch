@@ -71,7 +71,7 @@ class ResNet(nn.Module):
         self._activation = activation
 
         self.stem_type = stem_type
-        self.inplanes = 64
+        self.inplanes = 64 if len(layers) == 4 else 16
         self.dilation = 1
         if replace_stride_with_dilation is None:
             # each element in the tuple indicates if we should replace
@@ -86,17 +86,30 @@ class ResNet(nn.Module):
             self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3,
                                    bias=False)
             self.bn1 = norm_layer(self.inplanes)
+        elif stem_type == 'basic_small':
+            self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=3, stride=2, padding=1,
+                                   bias=False)
+            self.bn1 = norm_layer(self.inplanes)
         elif stem_type == 'dabnn':
             self.conv1 = DaBNNStem(self.inplanes, norm_layer=norm_layer)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
-                                       dilate=replace_stride_with_dilation[0])
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2,
-                                       dilate=replace_stride_with_dilation[1])
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
-                                       dilate=replace_stride_with_dilation[2])
+
+        if len(layers) == 4:
+            self.layer1 = self._make_layer(block, 64, layers[0])
+            self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
+                                        dilate=replace_stride_with_dilation[0])
+            self.layer3 = self._make_layer(block, 256, layers[2], stride=2,
+                                        dilate=replace_stride_with_dilation[1])
+            self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
+                                        dilate=replace_stride_with_dilation[2])
+        else:  # Handling ResNet20
+            self.layer1 = self._make_layer(block, 16, layers[0])
+            self.layer2 = self._make_layer(block, 32, layers[1], stride=2,
+                                        dilate=replace_stride_with_dilation[0])
+            self.layer3 = self._make_layer(block, 64, layers[2], stride=2,
+                                        dilate=replace_stride_with_dilation[1])
+
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(self.outplanes, num_classes)
 
@@ -147,7 +160,7 @@ class ResNet(nn.Module):
     def _forward_impl(self, x: torch.Tensor) -> torch.Tensor:
         # See note [TorchScript super()]
         x = self.conv1(x)
-        if self.stem_type == 'basic':
+        if self.stem_type == 'basic' or self.stem_type == 'basic_small':
             x = self.bn1(x)
             x = self.relu(x)
             x = self.maxpool(x)
@@ -155,7 +168,8 @@ class ResNet(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        x = self.layer4(x)
+        if len(self.layers) == 4:
+            x = self.layer4(x)
 
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
@@ -210,4 +224,16 @@ def resnet50(block_type: Optional[Type[Union[BasicBlock, Bottleneck, HBlock,
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _resnet('resnet50', Bottleneck if block_type is None else block_type, [3, 4, 6, 3],
+                   **kwargs)
+
+
+def resnet20(block_type: Optional[Type[Union[BasicBlock, Bottleneck, HBlock,
+                                             PreBottleneck, PreBasicBlock]]] = None, **kwargs: Any) -> ResNet:
+    r"""ResNet-20 model from
+    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    return _resnet('resnet20', BasicBlock if block_type is None else block_type, [2, 2, 2],
                    **kwargs)
