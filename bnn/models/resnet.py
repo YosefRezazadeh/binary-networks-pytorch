@@ -168,7 +168,7 @@ class ResNet(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        if len(self.layers) == 4:
+        if hasattr(self, 'layer4'):
             x = self.layer4(x)
 
         x = self.avgpool(x)
